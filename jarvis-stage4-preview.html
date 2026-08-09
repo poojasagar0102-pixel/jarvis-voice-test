@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jarvis — Knowledge Graph</title>
+<style>:root {
+  --bg: #05070a;
+  --panel: rgba(255, 255, 255, 0.025);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --accent: #38d9f0;
+  --accent-dim: rgba(56, 217, 240, 0.35);
+  --text: #e6f1f5;
+  --text-dim: #7f93a0;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 20px;
+  gap: 16px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand .wordmark {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.brand .subtitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px 16px;
+  min-width: 110px;
+}
+
+.stat-chip .label {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat-chip .value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.body-columns {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+}
+.body-columns main { flex: 1.4; }
+
+#chat-panel {
+  flex: 1;
+  min-width: 280px;
+  max-width: 420px;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header.static {
+  position: static;
+  pointer-events: auto;
+  border-bottom: 1px solid var(--panel-border);
+  padding: 16px 18px;
+}
+
+#chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.msg { display: flex; flex-direction: column; gap: 4px; }
+.msg-user .bubble {
+  align-self: flex-end;
+  background: rgba(56, 217, 240, 0.12);
+  border: 1px solid var(--accent-dim);
+  color: var(--text);
+}
+.msg-assistant .bubble {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+}
+.bubble {
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.msg-meta {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+
+.tag {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  width: fit-content;
+  margin-bottom: 2px;
+}
+.tag-search { color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); }
+.tag-error { color: #f0b83e; border: 1px solid rgba(240, 184, 62, 0.4); }
+.tag-model { color: var(--accent); border: 1px solid var(--accent-dim); }
+
+.result {
+  border-top: 1px solid var(--panel-border);
+  padding: 6px 0;
+}
+.result:first-child { border-top: none; padding-top: 0; }
+.result-name { font-weight: 600; color: var(--text); word-break: break-all; }
+.result-path { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+.result-snippet {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+#chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+#chat-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+#chat-input:focus { outline: none; border-color: var(--accent-dim); }
+#chat-form button {
+  background: var(--accent);
+  color: #04141a;
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.badge.offline {
+  color: #f0b83e;
+  border-color: rgba(240, 184, 62, 0.4);
+}
+#model-badge.offline { color: #f0b83e; }
+
+#voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 10px;
+}
+#mic-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+#mic-btn[data-state="listening"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-dim);
+}
+#mic-btn[data-state="speaking"] {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+#mic-btn[data-state="error"], #mic-btn[data-state="unavailable"] {
+  border-color: rgba(240, 184, 62, 0.5);
+  color: #f0b83e;
+}
+#mic-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+#reactor-canvas {
+  flex-shrink: 0;
+  width: 100px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+#voice-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+#voice-status[data-state="error"], #voice-status[data-state="unavailable"] {
+  color: #f0b83e;
+}
+#voice-status[data-state="listening"] { color: var(--accent); }
+#voice-status[data-state="speaking"] { color: #a78bfa; }
+
+.panel-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.panel-header .title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.badge.demo {
+  color: #f0b83e;
+  border-color: rgba(240, 184, 62, 0.35);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+canvas:active {
+  cursor: grabbing;
+}
+
+.toolbar {
+  position: absolute;
+  left: 16px;
+  top: 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 3;
+}
+
+.toolbar button {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toolbar button:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.legend {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  z-index: 3;
+  max-width: 220px;
+}
+.legend .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(5, 8, 12, 0.95);
+  border: 1px solid var(--accent-dim);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  z-index: 5;
+  display: none;
+  max-width: 260px;
+}
+.tooltip .name {
+  color: var(--accent);
+  font-weight: 600;
+  word-break: break-all;
+}
+.tooltip .meta {
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+footer {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+</style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">
+        <div class="wordmark">JARVIS</div>
+        <div class="subtitle">Stage 2 — Knowledge Graph</div>
+      </div>
+      <div class="stats">
+        <div class="stat-chip">
+          <div class="label">Files Indexed</div>
+          <div class="value" id="stat-files">—</div>
+        </div>
+        <div class="stat-chip">
+          <div class="label">Connections</div>
+          <div class="value" id="stat-connections">—</div>
+        </div>
+        <div class="stat-chip">
+          <div class="label">Folders Indexed</div>
+          <div class="value" id="stat-folders">—</div>
+        </div>
+        <div class="stat-chip">
+          <div class="label">Model</div>
+          <div class="value" id="model-badge" style="font-size:13px;">—</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="body-columns">
+    <main>
+      <div class="panel-header">
+        <div class="title">Knowledge Graph</div>
+        <span class="badge demo" id="mode-badge">DEMO DATA — not your real files</span>
+      </div>
+      <div class="toolbar">
+        <button id="zoom-in" title="Zoom in">+</button>
+        <button id="zoom-out" title="Zoom out">−</button>
+        <button id="zoom-reset" title="Reset view">⤢</button>
+      </div>
+      <canvas id="graph-canvas"></canvas>
+      <div class="legend">
+        <div style="color:#e6f1f5;font-weight:600;margin-bottom:6px;">Categories (from folder names)</div>
+        <div id="legend-body"></div>
+      </div>
+      <div class="tooltip" id="tooltip"></div>
+    </main>
+
+    <section id="chat-panel">
+      <div class="panel-header static">
+        <div class="title">Ask Jarvis</div>
+        <span class="badge offline" id="model-badge-2">MODEL OFFLINE</span>
+      </div>
+      <div id="chat-log"></div>
+      <div id="voice-row">
+        <button id="mic-btn" type="button" title="Voice mode">🎙</button>
+        <canvas id="reactor-canvas" width="200" height="40"></canvas>
+        <span id="voice-status" data-state="idle"></span>
+      </div>
+      <form id="chat-form">
+        <input id="chat-input" type="text" placeholder="Ask about your indexed files…" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+    </div>
+
+    <footer>
+      Generated <span id="generated-at">—</span> · Drag graph to pan · Scroll to zoom · Hover a node for details · Voice: mic button / Space / Esc to interrupt
+    </footer>
+  </div>
+
+  <script>// Auto-generated by scripts/build-graph-data.js — do not edit by hand.
+// Source: memory/index/latest.json (generated 2026-08-09T17:42:10.526Z)
+window.JARVIS_GRAPH_DATA = {
+  "generatedAt": "2026-08-09T17:42:10.526Z",
+  "foldersConfigured": [
+    "/home/claude/jarvis/demo-data"
+  ],
+  "totalFilesFound": 8,
+  "countsByExtension": {
+    ".md": 4,
+    ".txt": 3,
+    ".json": 1
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "/home/claude/jarvis/demo-data/notes/project_alpha.md",
+        "name": "project_alpha.md",
+        "ext": ".md",
+        "category": "notes",
+        "degree": 3
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/notes/random_idea.txt",
+        "name": "random_idea.txt",
+        "ext": ".txt",
+        "category": "notes",
+        "degree": 0
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/notes/sample.json",
+        "name": "sample.json",
+        "ext": ".json",
+        "category": "notes",
+        "degree": 1
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md",
+        "name": "meeting_2026_02_10.md",
+        "ext": ".md",
+        "category": "meetings",
+        "degree": 4
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/invoices/invoice_acme_001.txt",
+        "name": "invoice_acme_001.txt",
+        "ext": ".txt",
+        "category": "invoices",
+        "degree": 3
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/invoices/invoice_beta_002.txt",
+        "name": "invoice_beta_002.txt",
+        "ext": ".txt",
+        "category": "invoices",
+        "degree": 1
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/clients/acme_co.md",
+        "name": "acme_co.md",
+        "ext": ".md",
+        "category": "clients",
+        "degree": 4
+      },
+      {
+        "id": "/home/claude/jarvis/demo-data/clients/beta_industries.md",
+        "name": "beta_industries.md",
+        "ext": ".md",
+        "category": "clients",
+        "degree": 2
+      }
+    ],
+    "edges": [
+      [
+        "/home/claude/jarvis/demo-data/notes/project_alpha.md",
+        "/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/notes/project_alpha.md",
+        "/home/claude/jarvis/demo-data/invoices/invoice_acme_001.txt"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/notes/project_alpha.md",
+        "/home/claude/jarvis/demo-data/clients/acme_co.md"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md",
+        "/home/claude/jarvis/demo-data/invoices/invoice_acme_001.txt"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md",
+        "/home/claude/jarvis/demo-data/clients/acme_co.md"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md",
+        "/home/claude/jarvis/demo-data/clients/beta_industries.md"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/invoices/invoice_acme_001.txt",
+        "/home/claude/jarvis/demo-data/clients/acme_co.md"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/clients/acme_co.md",
+        "/home/claude/jarvis/demo-data/notes/sample.json"
+      ],
+      [
+        "/home/claude/jarvis/demo-data/clients/beta_industries.md",
+        "/home/claude/jarvis/demo-data/invoices/invoice_beta_002.txt"
+      ]
+    ]
+  }
+};
+</script>
+  <script>// Jarvis - Stage 2 Knowledge Graph renderer
+// Canvas only (not SVG) - stays fast well past 1,500 nodes.
+// Repulsion uses a spatial grid with a distance cutoff, so cost stays
+// near-linear instead of the O(n^2) you'd get checking every node pair.
+
+(function () {
+  'use strict';
+
+  const data = window.JARVIS_GRAPH_DATA;
+  const canvas = document.getElementById('graph-canvas');
+  const ctx = canvas.getContext('2d');
+  const tooltip = document.getElementById('tooltip');
+  const legendEl = document.getElementById('legend-body');
+
+  if (!data || !data.graph) {
+    ctx.fillStyle = '#e6f1f5';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('No graph data found. Run the Stage 1 indexer, then the build-graph-data script.', 20, 40);
+    return;
+  }
+
+  // ---------- Physics constants ----------
+  const REPULSION_CUTOFF = 160;   // px, world space - nodes farther apart than this ignore each other
+  const REPULSION_STRENGTH = 2600;
+  const SPRING_LENGTH = 110;
+  const SPRING_STRENGTH = 0.02;
+  const CENTER_PULL = 0.002;
+  const DAMPING = 0.85;
+
+  // ---------- Category color palette (assigned dynamically, not hardcoded per app) ----------
+  const PALETTE = ['#38d9f0', '#f0b83e', '#a78bfa', '#4ade80', '#f472b6', '#fb923c', '#60a5fa', '#facc15'];
+  const categories = [...new Set(data.graph.nodes.map((n) => n.category))].sort();
+  const categoryColor = new Map(categories.map((c, i) => [c, PALETTE[i % PALETTE.length]]));
+
+  // ---------- Build simulation nodes/edges ----------
+  const idToIndex = new Map();
+  const nodes = data.graph.nodes.map((n, i) => {
+    idToIndex.set(n.id, i);
+    const angle = (i / data.graph.nodes.length) * Math.PI * 2;
+    return {
+      ...n,
+      x: Math.cos(angle) * 200,
+      y: Math.sin(angle) * 200,
+      vx: 0,
+      vy: 0,
+      radius: 6 + Math.min(n.degree, 12) * 2.2,
+      color: categoryColor.get(n.category) || '#38d9f0',
+    };
+  });
+
+  const edges = data.graph.edges
+    .map(([a, b]) => [idToIndex.get(a), idToIndex.get(b)])
+    .filter(([a, b]) => a !== undefined && b !== undefined);
+
+  // ---------- Spatial grid for near-linear repulsion ----------
+  function buildGrid(cellSize) {
+    const grid = new Map();
+    const key = (cx, cy) => `${cx},${cy}`;
+    for (const node of nodes) {
+      const cx = Math.floor(node.x / cellSize);
+      const cy = Math.floor(node.y / cellSize);
+      const k = key(cx, cy);
+      if (!grid.has(k)) grid.set(k, []);
+      grid.get(k).push(node);
+    }
+    return { grid, key, cellSize };
+  }
+
+  function applyRepulsion() {
+    const { grid, key, cellSize } = buildGrid(REPULSION_CUTOFF);
+    for (const node of nodes) {
+      const cx = Math.floor(node.x / cellSize);
+      const cy = Math.floor(node.y / cellSize);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const bucket = grid.get(key(cx + dx, cy + dy));
+          if (!bucket) continue;
+          for (const other of bucket) {
+            if (other === node) continue;
+            const ddx = node.x - other.x;
+            const ddy = node.y - other.y;
+            const distSq = ddx * ddx + ddy * ddy;
+            if (distSq > REPULSION_CUTOFF * REPULSION_CUTOFF || distSq < 0.01) continue;
+            const dist = Math.sqrt(distSq);
+            const force = REPULSION_STRENGTH / distSq;
+            node.vx += (ddx / dist) * force;
+            node.vy += (ddy / dist) * force;
+          }
+        }
+      }
+    }
+  }
+
+  function applySprings() {
+    for (const [a, b] of edges) {
+      const na = nodes[a];
+      const nb = nodes[b];
+      const ddx = nb.x - na.x;
+      const ddy = nb.y - na.y;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy) || 0.01;
+      const force = (dist - SPRING_LENGTH) * SPRING_STRENGTH;
+      const fx = (ddx / dist) * force;
+      const fy = (ddy / dist) * force;
+      na.vx += fx;
+      na.vy += fy;
+      nb.vx -= fx;
+      nb.vy -= fy;
+    }
+  }
+
+  function applyCentering() {
+    for (const node of nodes) {
+      node.vx -= node.x * CENTER_PULL;
+      node.vy -= node.y * CENTER_PULL;
+    }
+  }
+
+  function tick() {
+    applyRepulsion();
+    applySprings();
+    applyCentering();
+    for (const node of nodes) {
+      node.vx *= DAMPING;
+      node.vy *= DAMPING;
+      node.x += node.vx;
+      node.y += node.vy;
+    }
+  }
+
+  // ---------- Pan / zoom state ----------
+  let panX = 0, panY = 0, zoom = 1;
+  let dragging = false, lastMouseX = 0, lastMouseY = 0;
+  let hoveredNode = null;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function worldToScreen(x, y) {
+    const cx = canvas.width / 2 + (x + panX) * zoom;
+    const cy = canvas.height / 2 + (y + panY) * zoom;
+    return [cx, cy];
+  }
+
+  function screenToWorld(sx, sy) {
+    const x = (sx * devicePixelRatio - canvas.width / 2) / zoom - panX;
+    const y = (sy * devicePixelRatio - canvas.height / 2) / zoom - panY;
+    return [x, y];
+  }
+
+  // ---------- Rendering ----------
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Edges
+    ctx.lineWidth = 1 * devicePixelRatio;
+    for (const [a, b] of edges) {
+      const na = nodes[a], nb = nodes[b];
+      const highlighted = hoveredNode && (na === hoveredNode || nb === hoveredNode);
+      ctx.strokeStyle = highlighted ? 'rgba(56, 217, 240, 0.7)' : 'rgba(255, 255, 255, 0.08)';
+      const [ax, ay] = worldToScreen(na.x, na.y);
+      const [bx, by] = worldToScreen(nb.x, nb.y);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+    }
+
+    // Nodes
+    for (const node of nodes) {
+      const [sx, sy] = worldToScreen(node.x, node.y);
+      const r = node.radius * zoom * devicePixelRatio;
+      const dimmed = hoveredNode && node !== hoveredNode && !edges.some(
+        ([a, b]) => (nodes[a] === hoveredNode && nodes[b] === node) || (nodes[b] === hoveredNode && nodes[a] === node)
+      );
+
+      ctx.save();
+      ctx.globalAlpha = dimmed ? 0.25 : 1;
+      ctx.shadowColor = node.color;
+      ctx.shadowBlur = (node === hoveredNode ? 22 : 10) * devicePixelRatio;
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Labels - most-connected first, skip any that collide with an already-placed box
+    ctx.font = `${12 * devicePixelRatio}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    const placedBoxes = [];
+    const sorted = [...nodes].sort((a, b) => b.degree - a.degree);
+    for (const node of sorted) {
+      const [sx, sy] = worldToScreen(node.x, node.y);
+      const r = node.radius * zoom * devicePixelRatio;
+      if (sx < -50 || sx > canvas.width + 50 || sy < -50 || sy > canvas.height + 50) continue;
+      const label = node.name;
+      const textWidth = ctx.measureText(label).width;
+      const boxX = sx + r + 4;
+      const boxY = sy - 7 * devicePixelRatio;
+      const boxW = textWidth + 6;
+      const boxH = 14 * devicePixelRatio;
+
+      const collides = placedBoxes.some((b) =>
+        boxX < b.x + b.w && boxX + boxW > b.x && boxY < b.y + b.h && boxY + boxH > b.y
+      );
+      if (collides) continue;
+      placedBoxes.push({ x: boxX, y: boxY, w: boxW, h: boxH });
+
+      ctx.fillStyle = node === hoveredNode ? '#e6f1f5' : 'rgba(230, 241, 245, 0.75)';
+      ctx.fillText(label, boxX, sy);
+    }
+  }
+
+  function loop() {
+    tick();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- Interaction ----------
+  canvas.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      panX += (e.clientX - lastMouseX) / zoom;
+      panY += (e.clientY - lastMouseY) / zoom;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    let closest = null, closestDist = Infinity;
+    for (const node of nodes) {
+      const dx = node.x - wx, dy = node.y - wy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < node.radius + 8 && d < closestDist) { closest = node; closestDist = d; }
+    }
+    hoveredNode = closest;
+    if (closest) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX - rect.left + 16) + 'px';
+      tooltip.style.top = (e.clientY - rect.top + 12) + 'px';
+      tooltip.innerHTML = `<div class="name">${closest.name}</div>` +
+        `<div class="meta">Category: ${closest.category}<br>Type: ${closest.ext}<br>Connections: ${closest.degree}</div>`;
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    zoom = Math.min(4, Math.max(0.2, zoom * delta));
+  }, { passive: false });
+
+  document.getElementById('zoom-in').addEventListener('click', () => { zoom = Math.min(4, zoom * 1.2); });
+  document.getElementById('zoom-out').addEventListener('click', () => { zoom = Math.max(0.2, zoom / 1.2); });
+  document.getElementById('zoom-reset').addEventListener('click', () => { zoom = 1; panX = 0; panY = 0; });
+
+  // ---------- Header stats + legend (real data only, nothing invented) ----------
+  document.getElementById('stat-files').textContent = data.totalFilesFound;
+  document.getElementById('stat-connections').textContent = data.graph.edges.length;
+  document.getElementById('stat-folders').textContent = data.foldersConfigured.length;
+  document.getElementById('generated-at').textContent = new Date(data.generatedAt).toLocaleString();
+
+  // Badge reflects the actual indexed folders - not hardcoded.
+  const isDemo = data.foldersConfigured.some((f) => f.includes('demo-data'));
+  const badge = document.getElementById('mode-badge');
+  if (isDemo) {
+    badge.textContent = 'DEMO DATA — not your real files';
+    badge.classList.add('demo');
+  } else {
+    badge.textContent = 'Indexed from your configured folders';
+    badge.classList.remove('demo');
+  }
+
+  legendEl.innerHTML = categories.map((c) =>
+    `<div class="row"><span class="dot" style="background:${categoryColor.get(c)}"></span>${c}</div>`
+  ).join('');
+
+  loop();
+})();
+</script>
+  <script>// Auto-generated by scripts/build-search-index.js - do not edit by hand.
+// Caches text content of your indexed files so the in-browser search can
+// work without a server. Stays local: nothing here is ever transmitted
+// anywhere - there are no network calls in this file or in chat.js.
+window.JARVIS_SEARCH_DATA = {"generatedAt":"2026-08-09T17:42:10.594Z","foldersConfigured":["/home/claude/jarvis/demo-data"],"inaccessibleFolders":[],"totalFiles":8,"contentCached":8,"skippedNonText":0,"skippedTooLarge":0,"skippedUnreadable":0,"truncated":0,"errors":[],"files":[{"id":"/home/claude/jarvis/demo-data/notes/project_alpha.md","name":"project_alpha.md","ext":".md","category":"notes","size":111,"mtime":"2026-08-09T07:49:25.561Z","content":"# Project Alpha (DEMO DATA)\nClient: acme_co\nRelated invoice: invoice_acme_001\nDiscussed in meeting_2026_02_10.\n"},{"id":"/home/claude/jarvis/demo-data/notes/random_idea.txt","name":"random_idea.txt","ext":".txt","category":"notes","size":54,"mtime":"2026-08-09T07:49:25.565Z","content":"Just a standalone demo note with no cross-references.\n"},{"id":"/home/claude/jarvis/demo-data/notes/sample.json","name":"sample.json","ext":".json","category":"notes","size":282,"mtime":"2026-08-09T07:49:25.584Z","content":"{\n  \"name\": \"jarvis-local\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"description\": \"Jarvis - local personal assistant (Stage 1: read-only folder indexer)\",\n  \"main\": \"src/indexer.js\",\n  \"scripts\": {\n    \"index\": \"node src/indexer.js\"\n  },\n  \"engines\": {\n    \"node\": \">=16\"\n  }\n}\n"},{"id":"/home/claude/jarvis/demo-data/meetings/meeting_2026_02_10.md","name":"meeting_2026_02_10.md","ext":".md","category":"meetings","size":139,"mtime":"2026-08-09T07:49:25.544Z","content":"# Meeting Notes - 2026-02-10 (DEMO DATA)\nAttendees: acme_co, beta_industries\nDiscussed project_alpha timeline and invoice_acme_001 status.\n"},{"id":"/home/claude/jarvis/demo-data/invoices/invoice_acme_001.txt","name":"invoice_acme_001.txt","ext":".txt","category":"invoices","size":111,"mtime":"2026-08-09T07:49:25.545Z","content":"DEMO INVOICE - FICTIONAL DATA\nClient: acme_co\nProject: project_alpha\nAmount: [placeholder - not a real figure]\n"},{"id":"/home/claude/jarvis/demo-data/invoices/invoice_beta_002.txt","name":"invoice_beta_002.txt","ext":".txt","category":"invoices","size":96,"mtime":"2026-08-09T07:49:25.550Z","content":"DEMO INVOICE - FICTIONAL DATA\nClient: beta_industries\nAmount: [placeholder - not a real figure]\n"},{"id":"/home/claude/jarvis/demo-data/clients/acme_co.md","name":"acme_co.md","ext":".md","category":"clients","size":163,"mtime":"2026-08-09T07:49:25.537Z","content":"# Acme Co (DEMO / FICTIONAL CLIENT)\nContact: Jane Sample\nNotes: Discussed in meeting_2026_02_10 and mentioned in invoice_acme_001.\nRelated project: project_alpha.\n"},{"id":"/home/claude/jarvis/demo-data/clients/beta_industries.md","name":"beta_industries.md","ext":".md","category":"clients","size":121,"mtime":"2026-08-09T07:49:25.542Z","content":"# Beta Industries (DEMO / FICTIONAL CLIENT)\nContact: Sam Placeholder\nRelated to invoice_beta_002 and meeting_2026_02_10.\n"}]};
+</script>
+  <script>// Jarvis - Stage 3 conversation + tools layer
+//
+// IMPORTANT: there is no LLM wired into this build. callModel() below is a
+// stub that always reports unavailable. Every response in this file comes
+// from local keyword search or a fixed system message - never from a
+// model - and every message is tagged with which one produced it, so
+// keyword matching is never presented as if a model were talking.
+//
+// Wiring up a real model later means adding an API key and, almost
+// certainly, a paid API - per your guardrails that happens only after
+// you explicitly approve it.
+
+(function () {
+  'use strict';
+
+  const searchData = window.JARVIS_SEARCH_DATA;
+  const chatLog = document.getElementById('chat-log');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const modelBadge = document.getElementById('model-badge');
+
+  if (!searchData) {
+    modelBadge.textContent = 'SEARCH INDEX MISSING';
+    modelBadge.classList.add('offline');
+    return;
+  }
+
+  // ---------- Stub model interface ----------
+  // Always unavailable in this build. Kept as an explicit function (rather
+  // than just omitted) so the offline path below has one clear place to
+  // check, instead of scattering "if no model" logic everywhere.
+  async function callModel(/* messages */) {
+    return { available: false, reason: 'No LLM is configured in this build.' };
+  }
+
+  const MODEL_AVAILABLE = false; // set once, drives the badge below
+
+  function renderModelBadge() {
+    const badges = [modelBadge, document.getElementById('model-badge-2')].filter(Boolean);
+    for (const b of badges) {
+      if (MODEL_AVAILABLE) {
+        b.textContent = 'MODEL ONLINE';
+        b.classList.remove('offline');
+      } else {
+        b.textContent = 'MODEL OFFLINE';
+        b.classList.add('offline');
+      }
+    }
+  }
+  renderModelBadge();
+
+  // ---------- Local search engine (keyword / TF scoring over cached content) ----------
+  function tokenize(str) {
+    return (str.toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length >= 2);
+  }
+
+  const STOPWORDS = new Set([
+    'the','a','an','is','are','was','were','be','been','to','of','in','on','for',
+    'and','or','with','about','what','who','where','when','why','how','me','my',
+    'you','your','it','this','that','do','does','did','can','could','please',
+    'find','search','show','tell','i','we','us','have','has','had',
+  ]);
+
+  function searchFiles(query, limit = 5) {
+    const terms = tokenize(query).filter((t) => !STOPWORDS.has(t));
+    if (terms.length === 0) return [];
+
+    const results = [];
+    for (const file of searchData.files) {
+      const nameTokens = tokenize(file.name + ' ' + file.category);
+      const contentTokens = file.content ? tokenize(file.content) : [];
+      let score = 0;
+      let matchedTerms = new Set();
+
+      for (const term of terms) {
+        const nameHits = nameTokens.filter((t) => t === term).length;
+        const contentHits = contentTokens.filter((t) => t === term).length;
+        if (nameHits > 0) { score += nameHits * 5; matchedTerms.add(term); }
+        if (contentHits > 0) { score += contentHits * 1; matchedTerms.add(term); }
+      }
+
+      if (score > 0) {
+        let snippet = null;
+        if (file.content) {
+          const lower = file.content.toLowerCase();
+          const firstTerm = terms.find((t) => lower.includes(t));
+          if (firstTerm) {
+            const idx = lower.indexOf(firstTerm);
+            const start = Math.max(0, idx - 60);
+            const end = Math.min(file.content.length, idx + 100);
+            snippet = (start > 0 ? '…' : '') + file.content.slice(start, end).trim() + (end < file.content.length ? '…' : '');
+          }
+        }
+        results.push({ file, score, matchedTerms: [...matchedTerms], snippet });
+      }
+    }
+
+    results.sort((a, b) => b.score - a.score);
+    return results.slice(0, limit);
+  }
+
+  // ---------- Offline router ----------
+  // Scores the query against indexed vocabulary (filenames + categories +
+  // cached content) to decide "this looks like it's about your files" vs
+  // "this looks like open-ended conversation." This is explicit heuristic
+  // scoring, shown to the user - never disguised as model reasoning.
+  function buildVocabulary() {
+    const vocab = new Set();
+    for (const file of searchData.files) {
+      for (const t of tokenize(file.name)) vocab.add(t);
+      for (const t of tokenize(file.category)) vocab.add(t);
+    }
+    return vocab;
+  }
+  const vocabulary = buildVocabulary();
+
+  function routeQuery(query) {
+    const terms = tokenize(query).filter((t) => !STOPWORDS.has(t));
+    if (terms.length === 0) return { route: 'empty', matchedVocab: [] };
+    const matchedVocab = terms.filter((t) => vocabulary.has(t));
+    const vocabRatio = matchedVocab.length / terms.length;
+    // Simple, visible threshold: if at least one term matches something in
+    // your indexed filenames/categories, treat this as a search request.
+    if (matchedVocab.length > 0) {
+      return { route: 'search', matchedVocab, vocabRatio };
+    }
+    return { route: 'conversation', matchedVocab, vocabRatio };
+  }
+
+  // ---------- Chat rendering ----------
+  // speakText (optional): a short plain-text version for voice output
+  // (Stage 4). If omitted, assistant messages fall back to a stripped
+  // version of `text`. This function's existing behavior is unchanged
+  // when Stage 4's voice.js isn't loaded - the hook call below is a no-op
+  // in that case.
+  function stripHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  function addMessage({ role, kind, text, meta, speakText }) {
+    const wrap = document.createElement('div');
+    wrap.className = `msg msg-${role}`;
+
+    if (role === 'assistant') {
+      const tag = document.createElement('div');
+      tag.className = `tag tag-${kind}`;
+      tag.textContent = kind === 'search' ? 'SEARCH RESULT' : kind === 'error' ? 'ERROR' : 'SYSTEM · NO MODEL';
+      wrap.appendChild(tag);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'bubble';
+    body.innerHTML = text;
+    wrap.appendChild(body);
+
+    if (meta) {
+      const metaEl = document.createElement('div');
+      metaEl.className = 'msg-meta';
+      metaEl.textContent = meta;
+      wrap.appendChild(metaEl);
+    }
+
+    chatLog.appendChild(wrap);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    if (role === 'assistant' && typeof window.JARVIS_ON_ASSISTANT_MESSAGE === 'function') {
+      window.JARVIS_ON_ASSISTANT_MESSAGE(kind, speakText || stripHtml(text));
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  async function handleQuery(query) {
+    addMessage({ role: 'user', text: escapeHtml(query) });
+
+    const modelResult = await callModel(query);
+    if (modelResult.available) {
+      // Unreachable in this build - MODEL_AVAILABLE is hardcoded false -
+      // but kept so the branch exists honestly rather than being absent.
+      addMessage({ role: 'assistant', kind: 'model', text: escapeHtml(modelResult.text) });
+      return;
+    }
+
+    const routing = routeQuery(query);
+
+    if (routing.route === 'empty') {
+      addMessage({
+        role: 'assistant', kind: 'error',
+        text: `I couldn't find any searchable words in that.`,
+      });
+      return;
+    }
+
+    if (routing.route === 'search') {
+      const results = searchFiles(query);
+      if (results.length === 0) {
+        addMessage({
+          role: 'assistant', kind: 'search',
+          text: `No matches in the indexed files for: ${escapeHtml(routing.matchedVocab.join(', '))}.`,
+          meta: `Model offline — routed to local search because these words matched indexed filenames/categories, but no file content matched.`,
+        });
+        return;
+      }
+      const html = results.map((r) => {
+        const snippetHtml = r.snippet ? `<div class="result-snippet">${escapeHtml(r.snippet)}</div>` : '';
+        return `<div class="result">
+          <div class="result-name">${escapeHtml(r.file.name)}</div>
+          <div class="result-path">${escapeHtml(r.file.category)} · ${escapeHtml(r.file.ext)} · score ${r.score}</div>
+          ${snippetHtml}
+        </div>`;
+      }).join('');
+      // Concise version for voice output (Stage 4) - the on-screen text
+      // above still shows every result in full; this is only what gets
+      // spoken aloud, so voice doesn't read out every snippet verbatim.
+      const speakText = results.length === 1
+        ? `Found 1 match: ${results[0].file.name}.`
+        : `Found ${results.length} matches. Top result: ${results[0].file.name}.`;
+      addMessage({
+        role: 'assistant', kind: 'search',
+        text: html,
+        meta: `Model offline — routed to local search. Matched indexed terms: ${routing.matchedVocab.join(', ')}.`,
+        speakText,
+      });
+      return;
+    }
+
+    // route === 'conversation', but there is no model to converse with.
+    addMessage({
+      role: 'assistant', kind: 'error',
+      text: `Model offline, and this didn't match anything in your indexed files, so I have no grounded way to answer it. Try asking about something in your indexed data — e.g. a filename, client, or category.`,
+      meta: `Local routing found no indexed-vocabulary matches for this query.`,
+    });
+  }
+
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const query = chatInput.value.trim();
+    if (!query) return;
+    chatInput.value = '';
+    handleQuery(query);
+  });
+
+  // ---------- Stage 4 hook ----------
+  // Exposes handleQuery so voice.js can feed transcribed speech through the
+  // exact same router/search path text input uses - no separate code path,
+  // no separate behavior. Purely additive; nothing above this line changes.
+  window.JarvisChat = { handleQuery };
+
+  // ---------- Startup message ----------
+  addMessage({
+    role: 'assistant', kind: 'error',
+    text: `No LLM is connected in this build, so I can't have open-ended conversation. I can search your indexed files — try something like a client name, a category (${[...new Set(searchData.files.map(f => f.category))].join(', ')}), or a filename.`,
+  });
+})();
+</script>
+  <script>// Jarvis - Stage 4: voice input/output + reactor
+//
+// Everything here is additive to Stage 3. If this file fails to load, or
+// none of the required browser APIs exist, Stage 3's text chat is
+// completely unaffected - chat.js has no dependency on this file.
+//
+// DISCLOSURE: this uses the browser's built-in SpeechRecognition API for
+// speech-to-text. On most browsers (including Chrome for Android) that
+// API sends captured audio to the browser vendor's servers to do the
+// transcription - it is not fully on-device. This is free (no API key,
+// no cost to you) but it is a real network call, unlike every other part
+// of this app, which makes none. Text-to-speech (speechSynthesis) may
+// also use on-device or cloud voices depending on your browser/OS.
+//
+// No LLM is involved anywhere in this file. Voice input is transcribed
+// speech fed into the exact same offline router/search used by typed
+// text (window.JarvisChat.handleQuery) - never a separate "smarter" path.
+
+(function () {
+  'use strict';
+
+  const micBtn = document.getElementById('mic-btn');
+  const voiceStatus = document.getElementById('voice-status');
+  const reactorCanvas = document.getElementById('reactor-canvas');
+  const reactorCtx = reactorCanvas ? reactorCanvas.getContext('2d') : null;
+
+  if (!micBtn || !voiceStatus || !window.JarvisChat) {
+    // Stage 3 UI elements/hook not present - nothing to wire up.
+    return;
+  }
+
+  // ---------- State ----------
+  // Declared before feature detection below, because the degrade branch
+  // calls setStatus() immediately, and setStatus() reads/writes `state`.
+  // (A `let` declared later in this scope is in the temporal dead zone
+  // until its own line runs - calling a function that touches it any
+  // earlier throws. Caught by voice-engine test 8, fixed here.)
+  // idle -> listening -> processing -> speaking -> (listening again, if
+  // still in voice mode) or idle (if voice mode turned off)
+  let state = 'idle';
+  let voiceModeEnabled = false;
+  let recognition = null;
+  let audioStream = null;
+  let audioCtx = null;
+  let analyser = null;
+  let levelIntervalId = null; // setInterval, per the Stage 4 spec - NOT requestAnimationFrame
+
+  function setStatus(newState, message) {
+    state = newState;
+    voiceStatus.textContent = message;
+    voiceStatus.dataset.state = newState;
+    micBtn.dataset.state = newState;
+    micBtn.textContent = newState === 'listening' ? '●' : newState === 'speaking' ? '▮' : newState === 'processing' ? '…' : '🎙';
+  }
+
+  // ---------- Feature detection (degrade loudly, never silently) ----------
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const sttAvailable = !!SpeechRecognitionCtor;
+  const ttsAvailable = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+  const micAvailable = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  function missingCapabilities() {
+    const missing = [];
+    if (!sttAvailable) missing.push('speech recognition');
+    if (!ttsAvailable) missing.push('speech synthesis');
+    if (!micAvailable) missing.push('microphone access (getUserMedia)');
+    return missing;
+  }
+
+  const missing = missingCapabilities();
+  if (missing.length > 0) {
+    micBtn.disabled = true;
+    micBtn.title = `Voice unavailable: this browser is missing ${missing.join(', ')}.`;
+    setStatus('unavailable', `VOICE UNAVAILABLE — this browser is missing: ${missing.join(', ')}.`);
+    return; // nothing below this point can safely run
+  }
+
+  setStatus('idle', 'Voice off. Tap the mic to enable.');
+
+  // ---------- Reactor: setInterval-driven level meter ----------
+  // Deliberately setInterval, not requestAnimationFrame: RAF stops
+  // entirely in a backgrounded tab, which would make the mic look "dead"
+  // with no indication why. setInterval keeps running (throttled, but not
+  // stopped) in the background.
+  function drawReactor(level) {
+    if (!reactorCtx) return;
+    const w = reactorCanvas.width, h = reactorCanvas.height;
+    reactorCtx.clearRect(0, 0, w, h);
+    const bars = 20;
+    const barW = w / bars;
+    for (let i = 0; i < bars; i++) {
+      // Deterministic pseudo-variation per bar from the single real level
+      // reading - not fabricated audio data, just a visual spread of one
+      // real measurement so the bars aren't all identical heights.
+      const wobble = 0.5 + 0.5 * Math.sin(i * 1.3 + level * 10);
+      const barH = Math.max(2, level * h * wobble);
+      reactorCtx.fillStyle = '#38d9f0';
+      reactorCtx.globalAlpha = 0.35 + level * 0.65;
+      reactorCtx.fillRect(i * barW + 1, h - barH, barW - 2, barH);
+    }
+    reactorCtx.globalAlpha = 1;
+  }
+
+  function clearReactor() {
+    if (!reactorCtx) return;
+    reactorCtx.clearRect(0, 0, reactorCanvas.width, reactorCanvas.height);
+  }
+
+  function startLevelMeter(stream) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    levelIntervalId = setInterval(() => {
+      analyser.getByteTimeDomainData(data);
+      let sumSquares = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sumSquares += v * v;
+      }
+      const rms = Math.sqrt(sumSquares / data.length); // real measured level, 0..~1
+      drawReactor(Math.min(1, rms * 4));
+    }, 50);
+  }
+
+  function stopLevelMeter() {
+    if (levelIntervalId) { clearInterval(levelIntervalId); levelIntervalId = null; }
+    if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+    analyser = null;
+    clearReactor();
+  }
+
+  // ---------- Microphone stream (for the reactor; independent of SpeechRecognition's own mic use) ----------
+  function acquireMic() {
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      audioStream = stream;
+      startLevelMeter(stream);
+    });
+  }
+
+  function releaseMic() {
+    stopLevelMeter();
+    if (audioStream) {
+      audioStream.getTracks().forEach((t) => t.stop());
+      audioStream = null;
+    }
+  }
+
+  // ---------- Speech recognition (single-shot per turn, not continuous streaming) ----------
+  function createRecognition() {
+    const r = new SpeechRecognitionCtor();
+    r.continuous = false;
+    r.interimResults = false;
+    r.lang = 'en-US';
+
+    r.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setStatus('processing', `Heard: "${transcript}" — routing…`);
+      window.JarvisChat.handleQuery(transcript);
+      // The assistant's response, once rendered, triggers speak() via the
+      // JARVIS_ON_ASSISTANT_MESSAGE hook below.
+    };
+
+    r.onerror = (e) => {
+      if (e.error === 'no-speech') {
+        // Not a real failure - just nothing heard. Restart quietly if still in voice mode.
+        if (voiceModeEnabled) startListening();
+        else setStatus('idle', 'Voice off.');
+        return;
+      }
+      setStatus('error', `Speech recognition error: ${e.error}. Tap the mic to try again.`);
+      voiceModeEnabled = false;
+      releaseMic();
+    };
+
+    r.onend = () => {
+      // Recognition stopped (either we stopped it, or it timed out).
+      // Only auto-restart if we're still supposed to be listening and
+      // nothing else (processing/speaking) has taken over.
+      if (voiceModeEnabled && state === 'listening') {
+        startListening();
+      }
+    };
+
+    return r;
+  }
+
+  function startListening() {
+    if (!voiceModeEnabled) return;
+    try {
+      recognition = createRecognition();
+      recognition.start();
+      setStatus('listening', 'Listening… speak now.');
+    } catch (err) {
+      setStatus('error', `Could not start listening: ${err.message}`);
+      voiceModeEnabled = false;
+      releaseMic();
+    }
+  }
+
+  function stopListeningInternal() {
+    if (recognition) {
+      recognition.onend = null; // prevent auto-restart from the stop we're about to trigger
+      try { recognition.stop(); } catch (err) { /* already stopped */ }
+      recognition = null;
+    }
+  }
+
+  // ---------- Text-to-speech ----------
+  function speak(text) {
+    if (!text) {
+      // Nothing to say - go straight back to listening if still in voice mode.
+      if (voiceModeEnabled) startListening(); else setStatus('idle', 'Voice off.');
+      return;
+    }
+    // Mic must be deaf while Jarvis speaks, or it transcribes itself.
+    stopListeningInternal();
+    setStatus('speaking', 'Jarvis is speaking…');
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.onend = () => {
+      if (voiceModeEnabled) startListening();
+      else setStatus('idle', 'Voice off.');
+    };
+    utter.onerror = () => {
+      setStatus('error', 'Speech synthesis failed.');
+      if (voiceModeEnabled) startListening();
+    };
+    window.speechSynthesis.speak(utter);
+  }
+
+  // Hook from chat.js: fires after every assistant message is rendered,
+  // whether the query came from voice or typed text. If voice mode is on,
+  // Jarvis speaks the response; if not, this is a no-op.
+  window.JARVIS_ON_ASSISTANT_MESSAGE = function (kind, speakText) {
+    if (!voiceModeEnabled) return;
+    speak(speakText);
+  };
+
+  // ---------- Barge-in ----------
+  // Explicit actions only, per spec: mic button, Space, or Esc. Never
+  // relies on the mic accidentally picking up the user's voice over
+  // Jarvis's own output.
+  function bargeIn() {
+    if (state === 'speaking') {
+      window.speechSynthesis.cancel();
+      if (voiceModeEnabled) startListening();
+    }
+  }
+
+  function disableVoiceMode() {
+    voiceModeEnabled = false;
+    window.speechSynthesis.cancel();
+    stopListeningInternal();
+    releaseMic();
+    setStatus('idle', 'Voice off. Tap the mic to enable.');
+  }
+
+  function enableVoiceMode() {
+    voiceModeEnabled = true;
+    setStatus('processing', 'Requesting microphone…');
+    acquireMic()
+      .then(() => startListening())
+      .catch((err) => {
+        voiceModeEnabled = false;
+        setStatus('error', `Microphone permission denied or unavailable (${err.name || err.message}).`);
+      });
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (!voiceModeEnabled) {
+      enableVoiceMode();
+    } else if (state === 'speaking') {
+      bargeIn();
+    } else {
+      disableVoiceMode();
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && voiceModeEnabled) {
+      disableVoiceMode();
+    }
+    if (e.key === ' ' && voiceModeEnabled && state === 'speaking') {
+      const active = document.activeElement;
+      const typing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+      if (!typing) {
+        e.preventDefault();
+        bargeIn();
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
