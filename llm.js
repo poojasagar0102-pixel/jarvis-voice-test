@@ -15,8 +15,8 @@
 (function () {
   'use strict';
 
-  const PROXY_URL = ''; // <- fill in after deploying your proxy (see /proxy/README.md)
-  const CLIENT_TOKEN = ''; // <- a token you choose yourself, matching the proxy's JARVIS_CLIENT_TOKEN secret (NOT the Anthropic key)
+  const PROXY_URL = 'https://jarvis-proxy-2.poojasagar0102.workers.dev/';
+  const CLIENT_TOKEN = 'jarvis_rivyan_token';
   const MODEL = 'claude-sonnet-5';
   const MAX_TOKENS = 1024;
   const MAX_TOOL_ROUNDS = 3; // hard cap - prevents a runaway tool-call loop from looping forever or running up cost
