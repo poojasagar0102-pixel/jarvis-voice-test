@@ -289,16 +289,6 @@
         return;
       }
 
-      // Diagnostic only - surfaces exactly why the model call failed
-      // (bad PROXY_URL, token mismatch, missing Anthropic key on the
-      // Worker, network error, etc.) instead of silently falling back
-      // to the offline router with no explanation. Console-only; does
-      // not change what's rendered in the chat UI or the fallback
-      // behavior itself.
-      if (modelResult.reason) {
-        console.log('[Jarvis] Model unavailable:', modelResult.reason);
-      }
-
       const routing = routeQuery(query);
 
       if (routing.route === 'empty') {
